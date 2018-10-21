@@ -1,0 +1,8 @@
+{
+  "name": "odo-wamp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:odojs/odo-wamp.git",
+  "author": "Thomas Coats <github@voodoolabs.net>",
+  "license": "MIT"
+}
