@@ -35,7 +35,7 @@ protocol[protocol.event.HELLO] = (router, session, args) => {
   const details = args.shift()
   if (typeof session.id !== 'undefined')
     return session.terminate(1002, 'protocol violation')
-  session.id = util.randomId()
+  session.id = randomId()
   session.send([protocol.event.WELCOME, session.id, { 'roles': { 'dealer': {}}}])
 }
 
@@ -117,7 +117,7 @@ protocol[protocol.event.PUBLISH] = function(session, msg) {
   const options = msg.shift()
   const topicUri = msg.shift()
   const ack = options && options.acknowledge
-  const publicationId = util.randomId()
+  const publicationId = randomId()
   const args = msg.shift() || []
   const kwargs = msg.shift() || {}
   if (ack) session.send([protocol.event.PUBLISHED, requestId, publicationId])
