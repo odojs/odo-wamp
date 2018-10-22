@@ -33,9 +33,9 @@ const protocol = {
 protocol[protocol.event.HELLO] = (router, session, args) => {
   const realm = args.shift()
   const details = args.shift()
-  if (typeof session.id !== 'undefined')
-    return session.terminate(1002, 'protocol violation')
+  if (session.id) return session.terminate(1002, 'protocol violation')
   session.id = randomId()
+  session.realm = realm
   session.send([protocol.event.WELCOME, session.id, { 'roles': { 'dealer': {}}}])
 }
 
@@ -47,11 +47,11 @@ protocol[protocol.event.REGISTER] = (router, session, args) => {
   const request = args.shift()
   const options = args.shift()
   const procUri = args.shift()
-  if (typeof router.getrpc(procUri) !== 'undefined')
-    return session.send([protocol.event.ERROR, protocol.event.REGISTER, request, {},
-      'protocol.event.error.procedure_already_exists'])
+  if (router.getrpc(session.realm, procUri))
+    return session.send([protocol.event.ERROR, protocol.event.REGISTER,
+      request, {}, 'protocol.event.error.procedure_already_exists'])
   const regId = session.register(procUri)
-  router.regrpc(procUri, (invId, args) =>
+  router.regrpc(session.realm, procUri, (invId, args) =>
     session.send([protocol.event.INVOCATION, invId, regId, {}, ...args]))
   session.send([protocol.event.REGISTERED, request, regId])
 }
@@ -61,38 +61,38 @@ protocol[protocol.event.CALL] = (router, session, args) => {
   const options = args.shift()
   const procUri = args.shift()
   const cb = (err, args) => {
-    if (err) return session.send([protocol.event.ERROR, protocol.event.CALL, callId, {},
-      'protocol.event.error.callee_failure'])
+    if (err) return session.send([protocol.event.ERROR, protocol.event.CALL,
+      callId, {}, 'protocol.event.error.callee_failure'])
     session.send([protocol.event.RESULT, callId, {}, ...args])
   }
-  if (!router.callrpc(procUri, args || [], cb))
-    session.send([protocol.event.ERROR, protocol.event.CALL, callId, {},
-      'protocol.event.error.no_such_procedure'])
+  if (!router.callrpc(session.realm, procUri, args || [], cb))
+    session.send([protocol.event.ERROR, protocol.event.CALL,
+      callId, {}, 'protocol.event.error.no_such_procedure'])
 }
 
 protocol[protocol.event.UNREGISTER] = (router, session, args) => {
   const requestId = args.shift()
   const registrationId = args.shift()
-  if (typeof session.unregister(registrationId) === 'undefined')
-    return session.send([protocol.event.ERROR, protocol.event.UNREGISTER, requestId, {},
-      'protocol.event.error.no_such_registration'])
-  router.unregrpc(uri)
+  if (!session.unregister(registrationId))
+    return session.send([protocol.event.ERROR, protocol.event.UNREGISTER,
+      requestId, {}, 'protocol.event.error.no_such_registration'])
+  router.unregrpc(session.realm, uri)
   session.send([protocol.event.UNREGISTERED, requestId])
 }
 
 protocol[protocol.event.YIELD] = (router, session, args) => {
   const invId = args.shift()
   const options = args.shift()
-  router.resrpc(invId, null, args || [])
+  router.resrpc(session.realm, invId, null, args || [])
 }
 
 protocol[protocol.event.SUBSCRIBE] = (router, session, args) => {
   const requestId = args.shift()
   const options = args.shift()
-  const topicUri = args.shift()
-  const subsId = session.subscribe(topicUri)
-  router.substopic(topicUri, subsId, (publicationId, args, kwargs) => {
-    const msg = [protocol.event.EVENT, subsId, publicationId, {}]
+  const uri = args.shift()
+  const subsId = session.subscribe(uri)
+  router.substopic(session.realm, uri, subsId, (id, args, kwargs) => {
+    const msg = [protocol.event.EVENT, subsId, id, {}]
     // Manage optional parameters args + kwargs
     if (args !== undefined) msg.push(args)
     if (kwargs !== undefined) msg.push(kwargs)
@@ -105,10 +105,10 @@ protocol[protocol.event.UNSUBSCRIBE] = (router, session, args) => {
   const requestId = args.shift()
   const subsid = args.shift()
   const topicUri = session.unsubscribe(subsid)
-  if (typeof router.gettopic(topicUri) === 'undefined')
-    return session.send([protocol.event.ERROR, protocol.event.UNSUBSCRIBE, requestId, {},
-      'protocol.event.error.no_such_subscription'])
-  router.unsubstopic(topicUri, subsid)
+  if (!router.gettopic(session.realm, topicUri))
+    return session.send([protocol.event.ERROR, protocol.event.UNSUBSCRIBE,
+      requestId, {}, 'protocol.event.error.no_such_subscription'])
+  router.unsubstopic(session.realm, topicUri, subsid)
   session.send([protocol.event.UNSUBSCRIBED, requestId])
 }
 
@@ -121,7 +121,7 @@ protocol[protocol.event.PUBLISH] = function(session, msg) {
   const args = msg.shift() || []
   const kwargs = msg.shift() || {}
   if (ack) session.send([protocol.event.PUBLISHED, requestId, publicationId])
-  router.publish(topicUri, publicationId, args, kwargs)
+  router.publish(session.realm, topicUri, publicationId, args, kwargs)
 }
 
 protocol[protocol.event.EVENT] = (router, session, args) => {
@@ -136,7 +136,7 @@ protocol[protocol.event.ERROR] = (session, msg) => {
   const errorUri = msg.shift()
   const args = msg.shift() || []
   if (requestType === protocol.event.INVOCATION)
-    router.resrpc(requestId, new Error(details), args)
+    router.resrpc(session.realm, requestId, new Error(details), args)
 }
 
 module.exports = protocol

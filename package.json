@@ -1,7 +1,7 @@
 {
   "name": "odo-wamp",
   "version": "1.0.1",
-  "main": "index.js",
+  "main": "router.js",
   "repository": "git@github.com:odojs/odo-wamp.git",
   "author": "Thomas Coats <github@voodoolabs.net>",
   "license": "MIT"
