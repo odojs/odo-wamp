@@ -36,7 +36,7 @@ protocol[protocol.event.HELLO] = (router, session, args) => {
   if (session.id) return session.terminate(1002, 'protocol violation')
   session.id = randomId()
   session.realm = realm
-  session.send([protocol.event.WELCOME, session.id, { 'roles': { 'dealer': {}}}])
+  session.send([protocol.event.WELCOME, session.id, { 'roles': { 'dealer': {}, 'broker': {}}}])
 }
 
 protocol[protocol.event.GOODBYE] = (router, session, args) => {
@@ -67,7 +67,7 @@ protocol[protocol.event.CALL] = (router, session, args) => {
   }
   if (!router.callrpc(session.realm, procUri, args || [], cb))
     session.send([protocol.event.ERROR, protocol.event.CALL,
-      callId, {}, 'protocol.event.error.no_such_procedure'])
+      callId, {}, 'protocol.event.error.no_such_procedure', [procUri]])
 }
 
 protocol[protocol.event.UNREGISTER] = (router, session, args) => {
@@ -112,7 +112,7 @@ protocol[protocol.event.UNSUBSCRIBE] = (router, session, args) => {
   session.send([protocol.event.UNSUBSCRIBED, requestId])
 }
 
-protocol[protocol.event.PUBLISH] = function(session, msg) {
+protocol[protocol.event.PUBLISH] = (session, msg) => {
   const requestId = msg.shift()
   const options = msg.shift()
   const topicUri = msg.shift()

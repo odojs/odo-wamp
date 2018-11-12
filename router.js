@@ -38,7 +38,7 @@ module.exports = (server) => {
     publish: (realm, uri, id, args, kwargs) => {
       if (!topics[realm] || !topics[realm][uri]) return false
       for (let key in topics[realm][uri]) {
-        if (typeof topics[realm][uri][key] === 'undefined') continue
+        if (!topics[realm][uri][key]) continue
         topics[realm][uri][key](id, args, kwargs)
       }
       return true
