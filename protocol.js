@@ -65,7 +65,7 @@ protocol[protocol.event.CALL] = (router, session, args) => {
       callId, {}, 'protocol.event.error.callee_failure'])
     session.send([protocol.event.RESULT, callId, {}, ...args])
   }
-  if (!router.callrpc(session.realm, procUri, args || [], cb))
+  if (!router.callrpc(session.id, session.realm, procUri, args || [], cb))
     session.send([protocol.event.ERROR, protocol.event.CALL,
       callId, {}, 'protocol.event.error.no_such_procedure', [procUri]])
 }

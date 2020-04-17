@@ -15,12 +15,12 @@ module.exports = (server) => {
       rpcs[realm][uri] = rpc
     },
     unregrpc: (realm, uri) => delete rpcs[realm][uri],
-    callrpc: (realm, uri, args, callback) => {
+    callrpc: (sessionid, realm, uri, args, callback) => {
       const fn = result.getrpc(realm, uri)
       if (!fn) return false
       const id = randomId()
       pending[id] = callback
-      fn(id, args)
+      fn(sessionid, id, args)
       return true
     },
     resrpc: (id, err, ...args) => {
